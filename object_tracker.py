@@ -266,7 +266,7 @@ def main(_argv):
             # cv2.rectangle(frame, (int(bbox[0]), int(
             #     bbox[1]-30)), (int(bbox[0])+(len(str(class_name)))*17, int(bbox[1])), color, -1)
             cv2.putText(frame, class_name, (int(bbox[0]), int(
-                bbox[1]-10)),0, 0.75, (255, 251, 46), 2, font = cv2.FONT_HERSHEY_SCRIPT_COMPLEX) 
+                bbox[1]-10)),0, 0.75, (255, 251, 46), 2) 
 
         # if enable info flag then print details about each track
             if FLAGS.info:
