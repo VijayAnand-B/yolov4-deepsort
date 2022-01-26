@@ -1,3 +1,8 @@
+from locale import strcoll
+from tensorflow.keras.models import load_model
+# import keras_ocr
+from easyocr import Reader
+# from utils import ocr
 from tools import generate_detections as gdet
 from deep_sort.tracker import Tracker
 from deep_sort.detection import Detection
@@ -14,15 +19,19 @@ from core.yolov4 import filter_boxes
 import core.utils as utils
 from absl.flags import FLAGS
 from absl import app, flags, logging
+# import pytesseract
 import tensorflow as tf
 import time
 import os
+
 # comment out below line to enable tensorflow logging outputs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 if len(physical_devices) > 0:
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
 # deep sort imports
+
 flags.DEFINE_string('framework', 'tf', '(tf, tflite, trt')
 flags.DEFINE_string('weights', './checkpoints/yolov4-416',
                     'path to weights file')
@@ -34,16 +43,41 @@ flags.DEFINE_string('video', './data/video/test.mp4',
 flags.DEFINE_string('output', None, 'path to output video')
 flags.DEFINE_string('output_format', 'XVID',
                     'codec used in VideoWriter when saving video to file')
-flags.DEFINE_float('iou', 0.40, 'iou threshold')
+flags.DEFINE_float('iou', 0.45, 'iou threshold')
 flags.DEFINE_float('score', 0.50, 'score threshold')
 flags.DEFINE_boolean('dont_show', False, 'dont show video output')
 flags.DEFINE_boolean('info', False, 'show detailed info of tracked objects')
 flags.DEFINE_boolean('count', False, 'count objects being tracked on screen')
 
+# def ocr(roi,reader):
+#     resimg = cv2.resize(roi, None, fx=25, fy=25,
+#                         interpolation=cv2.INTER_CUBIC)
+#     imgBlur = cv2.GaussianBlur(resimg, (3, 3), 1)
+#     imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
+#     results = reader.readtext(imgGray)
+
+#     try:
+#         number = results[0][-2]
+#         prob = results[0][-1]
+#         if number == 0:
+#             pass
+#         elif tid in d:
+#             if d[tid][1] < prob:
+#                 # d[tid].append([name, prob])
+#                 d[tid] = [number, prob]
+#         else:
+#             d[tid] = [number, prob]
+#     except:
+#         pass
+#     return number
+
 
 def main(_argv):
     # Definition of the parameters
     max_cosine_distance = 0.4
+    d = {}
+    # pipeline = keras_ocr.pipeline.Pipeline()
+    reader = Reader(['en'], gpu=True)
     nn_budget = None
     nms_max_overlap = 1.0
 
@@ -163,10 +197,10 @@ def main(_argv):
         class_names = utils.read_class_names(cfg.YOLO.CLASSES)
 
         # by default allow all classes in .names file
-        allowed_classes = list(class_names.values())
+        # allowed_classes = list(class_names.values())
 
         # custom allowed classes (uncomment line below to customize tracker for only people)
-        #allowed_classes = ['person']
+        allowed_classes = ['person']
 
         # loop through objects and use class index to get class name, allow only classes in allowed_classes list
         names = []
@@ -181,8 +215,8 @@ def main(_argv):
         names = np.array(names)
         count = len(names)
         if FLAGS.count:
-            cv2.putText(frame, "Objects being tracked: {}".format(
-                count), (5, 35), cv2.FONT_HERSHEY_COMPLEX_SMALL, 2, (0, 255, 0), 2)
+            cv2.putText(frame, "Objects being tracked: {}".format(count), (5, 35), cv2.FONT_HERSHEY_COMPLEX_SMALL, 2,
+                        (0, 255, 0), 2)
             print("Objects being tracked: {}".format(count))
         # delete detections that are not in allowed_classes
         bboxes = np.delete(bboxes, deleted_indx, axis=0)
@@ -190,8 +224,8 @@ def main(_argv):
 
         # encode yolo detections and feed to tracker
         features = encoder(frame, bboxes)
-        detections = [Detection(bbox, score, class_name, feature) for bbox,
-                      score, class_name, feature in zip(bboxes, scores, names, features)]
+        detections = [Detection(bbox, score, class_name, feature) for bbox, score, class_name, feature in
+                      zip(bboxes, scores, names, features)]
 
         # initialize color map
         cmap = plt.get_cmap('tab20b')
@@ -209,35 +243,131 @@ def main(_argv):
         tracker.predict()
         tracker.update(detections)
 
+        img = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         # update tracks
+
         for track in tracker.tracks:
             if not track.is_confirmed() or track.time_since_update > 1:
                 continue
             bbox = track.to_tlbr()
             class_name = track.get_class()
 
+            if class_name == 'person':
+                ocr = True
+                name = None
 
-            if class_name == 'ball':
-                # color = (255, 255, 255)
-                cv2.rectangle(frame, (int(bbox[0]), int(
-                    bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 255, 255), 1)
+                # draw bbox on screen
+                # # Local
+                # boundaries = [([155, 155, 155], [255, 255, 255]),  # white
+                #               ([0, 0, 0], [100, 100, 100]),  # Black
+                #               ([70, 205, 110], [140, 255, 170]),  # Green - Ref
+                #               ]
 
-            cv2.putText(frame, class_name, (int(bbox[0]), int(
-                bbox[1]-10)),0, 0.75, (255, 251, 46), 2) 
+                # BAYERN VS DORT
+                # boundaries = [([0, 0, 115], [40, 40, 160]),  # red
+                #               ([0, 200, 190], [50, 255, 255]),  # yellow
+                #               ([0, 0, 0], [40, 40, 40])]  # Black
 
-        # if enable info flag then print details about each track
-            if FLAGS.info:
-                print("Tracker ID: {}, Class: {},  BBox Coords (xmin, ymin, xmax, ymax): {}".format(
-                    str(track.track_id), class_name, (int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3]))))
+                # RMA VS CHEL
+                boundaries = [([70, 45, 15], [145, 100, 100]),  # blue
+                              ([210, 220, 220], [255, 255, 255]),  # white
+                              ([150, 150, 160], [200, 255, 255])]  # Ref - yellow
+
+                sumList = []
+                roi = img[int(bbox[1]):int(bbox[3]), int(bbox[0]):int(bbox[2])]
+
+                try:
+                    # -- Team Color Detection
+                    for (lower, upper) in boundaries:
+                        lower = np.array(lower, dtype="uint8")
+                        upper = np.array(upper, dtype="uint8")
+
+                        mask = cv2.inRange(roi, lower, upper)
+                        output = cv2.bitwise_and(roi, roi, mask=mask)
+
+                        sum = output.any(axis=-1).sum()
+                        sumList.append(sum)
+
+                    i = np.argmax(sumList)
+
+                    TeamList = ['whi', 'bla', 'Ref']
+                    team = TeamList[i]
+
+                    # color_list = [(30, 30, 150), (40, 225, 225), (15, 15, 15)]
+                    color_list = [
+                        (230, 230, 230), (20, 20, 20), (100, 230, 140)]
+                    color = color_list[i]
+
+                    tid = str(track.track_id)
+
+                    if team == 'Ref':
+                        cv2.putText(img, 'Ref', (int(bbox[0]), int(bbox[1] - 7)), 0, 0.5,
+                                    color, 2)
+                        continue
+
+                    if tid in d:
+                        if d[tid][1] > 0.9:
+                            # number = ocr(roi, reader, tid)
+                            ocr = False
+                    # else:
+                    #     number = ocr(roi, reader, tid)
+
+                    rma = ['1','3','4','6','7','8','9','10','13','14','15','18','20','22','23','24','33']
+                    che = ['2','4','5','6','7','11','12','13','15','16','19','21','22','24','25','26','28','29','30','31','35']
+
+                    # OCR
+                    if ocr == True:
+                        number = None
+                        resimg = cv2.resize(roi, None, fx=25, fy=25,
+                                            interpolation=cv2.INTER_CUBIC)
+                        imgBlur = cv2.GaussianBlur(resimg, (3, 3), 1)
+                        imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
+                        results = reader.readtext(imgGray)
+
+                        try:
+                            number = results[0][-2]
+                            prob = results[0][-1]
+                            if number.isnumeric():
+                                if number == 0 or number == '0':
+                                    pass
+                                elif tid in d:
+                                    if d[tid][1] < prob:
+                                        # d[tid].append([name, prob])
+                                        d[tid] = [number, prob]
+                                else:
+                                    d[tid] = [number, prob]
+                        except:
+                            pass
+
+                    if tid in d:
+                        name = str(d[tid][0]) + "-" + str(team)
+                    else:
+                        name = str(team)
+
+                    # track.track_id = str(number) + "-" + str(number)
+                    cv2.putText(img, name, (int(bbox[0]), int(bbox[1] - 7)), 0, 0.5,
+                                color, 2)
+                    if FLAGS.info:
+                        print("Tracker ID: {}, Class: {}, name: {},  BBox Coords (xmin, ymin, xmax, ymax): {}".format(str(track.track_id), class_name, name, (
+                            int(
+                                bbox[0]),
+                            int(
+                                bbox[1]),
+                            int(
+                                bbox[2]),
+                            int(bbox[3]))))
+                except:
+                    pass
 
         # calculate frames per second of running detections
+        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         fps = 1.0 / (time.time() - start_time)
         print("FPS: %.2f" % fps)
-        result = np.asarray(frame)
-        result = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        result = np.asarray(img)
+        # result = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-        if not FLAGS.dont_show:
-            cv2.imshow("Output Video", result)
+        # if not FLAGS.dont_show:
+        #     cv2.imshow("Output Video", result)
 
         # if output flag is set, save video file
         if FLAGS.output:
