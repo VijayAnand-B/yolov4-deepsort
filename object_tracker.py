@@ -49,27 +49,27 @@ flags.DEFINE_boolean('dont_show', False, 'dont show video output')
 flags.DEFINE_boolean('info', False, 'show detailed info of tracked objects')
 flags.DEFINE_boolean('count', False, 'count objects being tracked on screen')
 
-# def ocr(roi,reader):
-#     resimg = cv2.resize(roi, None, fx=25, fy=25,
-#                         interpolation=cv2.INTER_CUBIC)
-#     imgBlur = cv2.GaussianBlur(resimg, (3, 3), 1)
-#     imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
-#     results = reader.readtext(imgGray)
+def ocr(roi,reader):
+    resimg = cv2.resize(roi, None, fx=25, fy=25,
+                        interpolation=cv2.INTER_CUBIC)
+    imgBlur = cv2.GaussianBlur(resimg, (3, 3), 1)
+    imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
+    results = reader.readtext(imgGray)
 
-#     try:
-#         number = results[0][-2]
-#         prob = results[0][-1]
-#         if number == 0:
-#             pass
-#         elif tid in d:
-#             if d[tid][1] < prob:
-#                 # d[tid].append([name, prob])
-#                 d[tid] = [number, prob]
-#         else:
-#             d[tid] = [number, prob]
-#     except:
-#         pass
-#     return number
+    try:
+        number = results[0][-2]
+        prob = results[0][-1]
+        if number == 0:
+            pass
+        elif tid in d:
+            if d[tid][1] < prob:
+                # d[tid].append([name, prob])
+                d[tid] = [number, prob]
+        else:
+            d[tid] = [number, prob]
+    except:
+        pass
+    return number
 
 
 def main(_argv):
@@ -307,10 +307,10 @@ def main(_argv):
 
                     if tid in d:
                         if d[tid][1] > 0.9:
-                            # number = ocr(roi, reader, tid)
+                            number = ocr(roi, reader, tid)
                             ocr = False
-                    # else:
-                    #     number = ocr(roi, reader, tid)
+                    else:
+                        number = ocr(roi, reader, tid)
 
                     rma = ['1','3','4','6','7','8','9','10','13','14','15','18','20','22','23','24','33']
                     che = ['2','4','5','6','7','11','12','13','15','16','19','21','22','24','25','26','28','29','30','31','35']
