@@ -216,55 +216,12 @@ def main(_argv):
             bbox = track.to_tlbr()
             class_name = track.get_class()
 
-        # draw bbox on screen
-            # names = {'6_d': 'Thomas Delaney',
-            #          '10_b': 'Leroy Sane',
-            #          '18_b': 'Leon Goretzka',
-            #          '25_b': 'Thomas Muller',
-            #          '5_d': 'Dan-Axel Zagadou',
-            #          '12_d': 'Zaragoza',
-            #          '4_b': 'Niklas Sule',
-            #          '14_d': 'Nico Schulz',
-            #          '11_d': 'Marco Reus',
-            #          'Referee': 'Referee',
-            #          'ball': 'ball',
-            #          '10_d': 'Thorgan Hazard',
-            #          '6_b': 'Joshua Kimmich ',
-            #          'gk_b': 'Ron-Thorben Hoffmann(GK)',
-            #          '17_b': 'Jérôme Boateng',
-            #          '27_b': 'David Alaba',
-            #          '9_d': 'Erling Haaland',
-            #          '8_d': 'Mahmoud Dahoud',
-            #          'gk_d': 'Luca Unbehaun(GK)',
-            #          '19_b': 'Alphonso Davies',
-            #          '29_b': 'Kingsley Coman',
-            #          '24_d': 'Marcel Schmelzer',
-            #          '9_b': 'Robert Lewandowski',
-            #          "23_d": 'Emre Can',
-            #          }
-            # if class_name == 'Referee':
-            #     color = (0, 0, 0)
+
             if class_name == 'ball':
                 # color = (255, 255, 255)
                 cv2.rectangle(frame, (int(bbox[0]), int(
                     bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 255, 255), 1)
-            # else:
 
-                # try:
-                #     colors = {'b': (252, 3, 78), 'd': (250, 247, 80)}
-                #     color = colors[str(class_name.split('_')[-1])]
-                # except KeyError:
-                #     pass
-
-            # class_name = names[str(class_name)]
-            # color = (250, 247, 80)
-
-            # color = colors[int(track.track_id) % len(colors)]
-            # color = [i * 255 for i in color]
-            # cv2.rectangle(frame, (int(bbox[0]), int(
-            #     bbox[1])), (int(bbox[2]), int(bbox[3])), color, 1)
-            # cv2.rectangle(frame, (int(bbox[0]), int(
-            #     bbox[1]-30)), (int(bbox[0])+(len(str(class_name)))*17, int(bbox[1])), color, -1)
             cv2.putText(frame, class_name, (int(bbox[0]), int(
                 bbox[1]-10)),0, 0.75, (255, 251, 46), 2) 
 
